@@ -1,0 +1,16 @@
+# the safe template (goes to GitHub)
+# config.example.yaml
+# This is a TEMPLATE with fake values. Safe to put on GitHub.
+# To use: copy this file to "config.yaml" and fill in your real values.
+# config.yaml is git-ignored and never uploaded.
+
+# Network drive mount paths (where they appear in /mnt or /media)
+netdrive_paths:
+  - "/mnt/YourDrive1"
+  - "/mnt/YourDrive2"
+
+# Your organization's VPN download URL
+vpn_url: "https://vpn.example.com/download/"
+
+citrix_url: "https://www.citrix.com/downloads/workspace-app/linux/"
+

@@ -1,0 +1,345 @@
+#!/usr/bin/env python3
+"""Fix Helper - self-service fixes for domain-joined Ubuntu machines."""
+
+import csv
+import datetime
+import os
+import re
+import subprocess
+import sys
+import threading
+import html
+
+import gi
+gi.require_version("Gtk", "4.0")
+gi.require_version("Adw", "1")
+from gi.repository import Adw, GLib, Gtk  # noqa: E402
+import yaml  # noqa: E402
+
+APP_ID = "com.yourcompany.FixHelper"
+SYSTEM_CATALOG_DIR = "/usr/share/fixhelper/catalog"
+DEV_CATALOG_DIR = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "..", "catalog"
+)
+ETC_CONFIG = "/etc/fixhelper/config.yaml"
+FEEDBACK_DIR = os.path.expanduser("~/.local/share/fixhelper")
+FEEDBACK_FILE = os.path.join(FEEDBACK_DIR, "feedback.csv")
+
+
+def catalog_dir():
+    if os.path.isfile(os.path.join(SYSTEM_CATALOG_DIR, "catalog.yaml")):
+        return SYSTEM_CATALOG_DIR
+    return os.path.abspath(DEV_CATALOG_DIR)
+
+
+def load_catalog():
+    path = os.path.join(catalog_dir(), "catalog.yaml")
+    with open(path, "r", encoding="utf-8") as f:
+        data = yaml.safe_load(f)
+    if not data or "fixes" not in data:
+        raise ValueError(f"Catalog {path} has no 'fixes' list")
+    return data
+
+
+def load_etc_config():
+    """Load /etc/fixhelper/config.yaml; return {} if missing or broken."""
+    try:
+        with open(ETC_CONFIG, "r", encoding="utf-8") as f:
+            return yaml.safe_load(f) or {}
+    except Exception:
+        return {}
+
+
+def fill_placeholders(text, config):
+    """Replace {key} in text with config values; leave unknown keys as-is."""
+    def repl(m):
+        val = config.get(m.group(1), m.group(0))
+        return ", ".join(val) if isinstance(val, list) else str(val)
+    return re.sub(r"\{(\w+)\}", repl, text)
+
+def linkify(text):
+    """Make URLs in text clickable; escape the rest for Pango markup."""
+    url_pattern = re.compile(r'(https?://[^\s<>"\)]+)')
+    parts = []
+    last = 0
+    for m in url_pattern.finditer(text):
+        parts.append(html.escape(text[last:m.start()]))
+        url = m.group(1)
+        parts.append(f'<a href="{html.escape(url, quote=True)}">{html.escape(url)}</a>')
+        last = m.end()
+    parts.append(html.escape(text[last:]))
+    return "".join(parts)
+
+def log_feedback(fix_id, event, detail=""):
+    os.makedirs(FEEDBACK_DIR, exist_ok=True)
+    new = not os.path.exists(FEEDBACK_FILE)
+    with open(FEEDBACK_FILE, "a", newline="", encoding="utf-8") as f:
+        w = csv.writer(f)
+        if new:
+            w.writerow(["timestamp", "user", "fix_id", "event", "detail"])
+        w.writerow([
+            datetime.datetime.now().isoformat(timespec="seconds"),
+            os.environ.get("USER", "unknown"), fix_id, event, detail,
+        ])
+
+
+class ScriptResultDialog(Adw.MessageDialog):
+    def __init__(self, parent, fix, rc, output):
+        ok = rc == 0
+        super().__init__(
+            transient_for=parent,
+            heading="Fix applied successfully" if ok else "Fix failed",
+        )
+        sw = Gtk.ScrolledWindow(min_content_height=180, min_content_width=460)
+        lbl = Gtk.Label(
+            label=output.strip() or "(no output)", wrap=True, selectable=True,
+            xalign=0, margin_top=6, margin_bottom=6, margin_start=6, margin_end=6,
+        )
+        lbl.add_css_class("monospace")
+        sw.set_child(lbl)
+        self.set_extra_child(sw)
+        self.add_response("close", "Close")
+        if not ok:
+            self.add_response("report", "Report this failure")
+            self.set_response_appearance("report", Adw.ResponseAppearance.SUGGESTED)
+        self.connect("response", self._resp, fix, rc, output)
+
+    def _resp(self, _d, response, fix, rc, output):
+        if response == "report":
+            log_feedback(fix["id"], "script_failed", f"rc={rc}; tail={output[-300:]}")
+
+
+class ManualStepsWindow(Adw.Window):
+    def __init__(self, parent, fix):
+        super().__init__(transient_for=parent, modal=True,
+                         default_width=580, default_height=560, title=fix["title"])
+        self.fix = fix
+        self.parent_win = parent
+        tb = Adw.ToolbarView()
+        tb.add_top_bar(Adw.HeaderBar())
+        page = Adw.PreferencesPage()
+        cfg = load_etc_config()
+
+        # --- the steps ---
+        grp = Adw.PreferencesGroup(title=fix["title"],
+                                   description=fix.get("description", ""))
+        for i, step in enumerate(fix.get("steps", []), start=1):
+            filled = fill_placeholders(step, cfg)
+            row = Adw.ActionRow()
+            # number badge
+            num = Gtk.Label(label=str(i))
+            num.add_css_class("dim-label")
+            num.set_valign(Gtk.Align.START)
+            row.add_prefix(num)
+            # a real Gtk.Label with markup = reliable clickable links
+            lbl = Gtk.Label()
+            lbl.set_markup(linkify(filled))
+            lbl.set_use_markup(True)
+            lbl.set_wrap(True)
+            lbl.set_xalign(0)
+            lbl.set_selectable(True)
+            lbl.set_hexpand(True)
+            row.set_title_widget(lbl)     # put the label where the title goes
+            # copy button
+            copy_btn = Gtk.Button(icon_name="edit-copy-symbolic",
+                                  valign=Gtk.Align.CENTER,
+                                  tooltip_text="Copy this step")
+            copy_btn.add_css_class("flat")
+            copy_btn.connect("clicked", self._copy, filled)
+            row.add_suffix(copy_btn)
+            grp.add(row)
+
+        page.add(grp)
+
+        # --- optional action button (for hybrid fixes like Citrix) ---
+        action = fix.get("action_script")
+        if action:
+            action_grp = Adw.PreferencesGroup()
+            action_row = Adw.ActionRow(
+                title=fix.get("action_label", "Finish the installation"),
+                subtitle="Click after you have downloaded the file")
+            action_row.set_subtitle_lines(0)
+            self.action_btn = Gtk.Button(label="Fix it", valign=Gtk.Align.CENTER)
+            self.action_btn.add_css_class("suggested-action")
+            if fix.get("action_privilege") == "root":
+                self.action_btn.set_tooltip_text(
+                    "An administrator password will be requested")
+            self.action_btn.connect("clicked", self._run_action, fix)
+            action_row.add_suffix(self.action_btn)
+            action_grp.add(action_row)
+            page.add(action_grp)
+
+        # --- ONE subtle report link at the very bottom ---
+        report_grp = Adw.PreferencesGroup()
+        report_row = Adw.ActionRow(
+            title="Stuck on a step?",
+            subtitle="Let IT know which step didn't work")
+        report_btn = Gtk.Button(label="Report a problem",
+                                valign=Gtk.Align.CENTER)
+        report_btn.add_css_class("flat")
+        report_btn.connect("clicked", self._report)
+        report_row.add_suffix(report_btn)
+        report_grp.add(report_row)
+        page.add(report_grp)
+
+        self.toast = Adw.ToastOverlay()
+        self.toast.set_child(page)
+        tb.set_content(self.toast)
+        self.set_content(tb)
+
+    def _copy(self, _button, text):
+        self.get_clipboard().set(text)
+        self.toast.add_toast(Adw.Toast(title="Copied"))
+
+    def _report(self, _button):
+        # ask which step, then log it
+        n = len(self.fix.get("steps", []))
+        dlg = Adw.MessageDialog(transient_for=self,
+                                heading="Which step didn't work?",
+                                body="Pick the step number you got stuck on.")
+        for i in range(1, n + 1):
+            dlg.add_response(str(i), f"Step {i}")
+        dlg.add_response("cancel", "Cancel")
+        dlg.set_close_response("cancel")
+        dlg.connect("response", self._report_done)
+        dlg.present()
+
+    def _report_done(self, _dlg, response):
+        if response != "cancel":
+            log_feedback(self.fix["id"], "step_failed", f"step={response}")
+            self.toast.add_toast(Adw.Toast(title="Thanks, reported to IT"))
+
+    def _run_action(self, button, fix):
+        script = os.path.join(catalog_dir(), "fixes", fix["action_script"])
+        if not os.path.isfile(script):
+            self.toast.add_toast(Adw.Toast(title=f"Script not found: {script}"))
+            return
+        cmd = (["pkexec", "/bin/bash", script]
+               if fix.get("action_privilege") == "root" else ["/bin/bash", script])
+        button.set_sensitive(False)
+        button.set_label("Running\u2026")
+        log_feedback(fix["id"], "action_started")
+        threading.Thread(target=self._action_thread, args=(cmd, fix, button),
+                         daemon=True).start()
+
+    def _action_thread(self, cmd, fix, button):
+        try:
+            p = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+            rc, out = p.returncode, (p.stdout + p.stderr)
+        except Exception as e:
+            rc, out = 1, str(e)
+        GLib.idle_add(self._action_done, fix, button, rc, out)
+
+    def _action_done(self, fix, button, rc, out):
+        button.set_sensitive(True)
+        button.set_label("Fix it")
+        if rc in (126, 127):
+            self.toast.add_toast(Adw.Toast(
+                title="Cancelled \u2014 administrator authentication is required."))
+            return False
+        log_feedback(fix["id"], "action_finished", f"rc={rc}")
+        ScriptResultDialog(self, fix, rc, out).present()
+        return False
+
+class FixHelperWindow(Adw.ApplicationWindow):
+    def __init__(self, app, catalog):
+        super().__init__(application=app, title="Fix Helper",
+                         default_width=680, default_height=640)
+        tb = Adw.ToolbarView()
+        tb.add_top_bar(Adw.HeaderBar())
+        self.toast = Adw.ToastOverlay()
+        page = Adw.PreferencesPage()
+        cats = {}
+        for fix in catalog["fixes"]:
+            cats.setdefault(fix.get("category", "General"), []).append(fix)
+        for name, fixes in cats.items():
+            grp = Adw.PreferencesGroup(title=name)
+            for fix in fixes:
+                grp.add(self._row(fix))
+            page.add(grp)
+        self.toast.set_child(page)
+        tb.set_content(self.toast)
+        self.set_content(tb)
+
+    def _row(self, fix):
+        row = Adw.ActionRow(title=fix["title"], subtitle=fix.get("description", ""))
+        row.set_subtitle_lines(0)
+        priv = fix.get("privilege", "none")
+        if fix["type"] == "script":
+            if priv == "local-admin-login":
+                badge = Gtk.Label(label="Requires local admin login")
+                badge.add_css_class("dim-label")
+                badge.set_valign(Gtk.Align.CENTER)
+                row.add_suffix(badge)
+            else:
+                btn = Gtk.Button(label="Fix it", valign=Gtk.Align.CENTER)
+                btn.add_css_class("suggested-action")
+                if priv == "root":
+                    btn.set_tooltip_text("An administrator password will be requested")
+                btn.connect("clicked", self._run, fix)
+                row.add_suffix(btn)
+        elif fix["type"] == "manual":
+            btn = Gtk.Button(label="Show steps", valign=Gtk.Align.CENTER)
+            btn.connect("clicked", self._steps, fix)
+            row.add_suffix(btn)
+        return row
+
+    def _steps(self, _b, fix):
+        log_feedback(fix["id"], "steps_opened")
+        ManualStepsWindow(self, fix).present()
+
+    def _run(self, button, fix):
+        script = os.path.join(catalog_dir(), "fixes", fix["script"])
+        if not os.path.isfile(script):
+            self.toast.add_toast(Adw.Toast(title=f"Script not found: {script}"))
+            return
+        cmd = (["pkexec", "/bin/bash", script]
+               if fix.get("privilege") == "root" else ["/bin/bash", script])
+        button.set_sensitive(False)
+        button.set_label("Running\u2026")
+        log_feedback(fix["id"], "script_started")
+        threading.Thread(target=self._thread, args=(cmd, fix, button),
+                         daemon=True).start()
+
+    def _thread(self, cmd, fix, button):
+        try:
+            p = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+            rc, out = p.returncode, (p.stdout + p.stderr)
+        except subprocess.TimeoutExpired:
+            rc, out = 1, "Timed out after 10 minutes."
+        except FileNotFoundError as e:
+            rc, out = 1, f"Could not start: {e}"
+        GLib.idle_add(self._done, fix, button, rc, out)
+
+    def _done(self, fix, button, rc, out):
+        button.set_sensitive(True)
+        button.set_label("Fix it")
+        if rc in (126, 127):
+            self.toast.add_toast(Adw.Toast(
+                title="Cancelled \u2014 administrator authentication is required."))
+            log_feedback(fix["id"], "auth_cancelled")
+            return False
+        log_feedback(fix["id"], "script_finished", f"rc={rc}")
+        ScriptResultDialog(self, fix, rc, out).present()
+        return False
+
+
+class FixHelperApp(Adw.Application):
+    def __init__(self):
+        super().__init__(application_id=APP_ID)
+
+    def do_activate(self):
+        win = self.get_active_window()
+        if not win:
+            try:
+                catalog = load_catalog()
+            except Exception as e:
+                d = Gtk.MessageDialog(text=f"Could not load catalog:\n{e}")
+                d.present()
+                return
+            win = FixHelperWindow(self, catalog)
+        win.present()
+
+
+if __name__ == "__main__":
+    sys.exit(FixHelperApp().run(sys.argv))

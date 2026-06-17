@@ -1,0 +1,99 @@
+# Fix Helper catalog - v0
+# type: script | manual      privilege: none | root
+format_version: 1
+
+fixes:
+
+  # ===== YOUR 3 v0 PRIORITIES =====
+
+  # 1. Quicker domain login (needs root -> pkexec password popup)
+  - id: sssd-slow-login
+    title: "Domain login takes very long"
+    description: >
+      Speeds up domain user login by skipping slow AD group checks.
+      An administrator password will be requested.
+    category: "Domain / Login"
+    type: script
+    privilege: root
+    script: fix-sssd-login.sh
+
+  # 2a. Install all M365 web app icons (global, needs root)
+  - id: m365-webapps-install
+    title: "Install Microsoft 365 app icons (Outlook, Word, Excel, PowerPoint, Teams)"
+    description: >
+      Creates app icons for everyone on this machine. An administrator
+      password will be requested.
+    category: "Office applications"
+    type: script
+    privilege: root
+    script: install-m365-webapps.sh
+
+  # 2b. Install Outlook icon only (global, needs root)
+  - id: outlook-webapp-install
+    title: "Install Outlook icon only"
+    description: >
+      Creates just the Outlook app icon for everyone on this machine.
+      An administrator password will be requested.
+    category: "Office applications"
+    type: script
+    privilege: root
+    script: install-outlook-webapp.sh
+
+  # 2c. Remove the M365 icons (global, needs root)
+  - id: m365-webapps-uninstall
+    title: "Remove Microsoft 365 app icons"
+    description: >
+      Removes the M365 app icons from this machine. An administrator
+      password will be requested.
+    category: "Office applications"
+    type: script
+    privilege: root
+    script: uninstall-m365-webapps.sh
+
+  # ===== OFFICE / NETWORK DRIVES =====
+
+  # OnlyOffice access to network drives (user-level, NO password)
+  - id: onlyoffice-netdrives
+    title: "OnlyOffice cannot save files to network drives"
+    description: >
+      Grants OnlyOffice access to your network drives (Qdrev and
+      Personal). Runs as you, no admin password needed.
+    category: "Office applications"
+    type: script
+    privilege: none
+    script: onlyoffice-qdrev.sh
+
+  # ===== OPTIONAL SOFTWARE =====
+
+  # Cisco VPN - interactive installer, so manual steps
+  - id: dtu-vpn-install
+    title: "Install Cisco VPN (DTU)"
+    description: >
+      The VPN installer is interactive (asks you to accept a licence),
+      so follow these steps in a terminal.
+    category: "Optional software"
+    type: manual
+    steps:
+      - "Open your organization's VPN download page: {vpn_url} (download the Linux/64 package into Downloads)."
+      - "In Downloads, extract the downloaded archive (right click -> Extract Here)."
+      - "Open the extracted folders until you reach the folder named 'vpn' that contains vpn_install.sh."
+      - "Right click on blank space inside the 'vpn' folder and choose 'Open Terminal Here'."
+      - "Run: sudo ./vpn_install.sh  (an administrator must type their password)."
+      - "When asked to accept the licence terms, type y and press Enter."
+      - "Open Cisco Secure Client and connect to: vpn.dtu.dk"
+      - "Approve the sign-in in Microsoft Authenticator on your phone."
+
+  # Citrix Workspace - public download page + interactive installer, so manual steps
+  - id: citrix-install
+    title: "Install Citrix Workspace"
+    description: >
+      Download Citrix from the web, then click "Fix it" to finish.
+    category: "Optional software"
+    type: manual
+    action_script: citrix-install.sh
+    action_label: "Finish installing Citrix"
+    action_privilege: root
+    steps:
+      - "Open the Citrix Workspace download page: {citrix_url}"
+      - "Under 'Workspace app for Linux', download the Debian package (.deb) for 64-bit into your Downloads folder."
+      - "Come back here and click 'Fix it' below."

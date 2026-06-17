@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Fix Helper
+Comment=Self-service fixes for common problems
+Exec=fixhelper
+Icon=preferences-system
+Terminal=false
+Type=Application
+Categories=System;Utility;
