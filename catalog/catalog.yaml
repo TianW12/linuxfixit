@@ -130,3 +130,16 @@ fixes:
       - "Choose your Linux version, then download BOTH the 'LPR driver' (.deb) and the 'CUPS wrapper driver' (.deb) into your Downloads folder."
       - "Come back here and click 'Fix it' below."
       - "After it finishes, add the printer in Settings -> Printers (or http://localhost:631) using socket://<printer-ip>:9100 and the 'Brother PT-P950NW' driver."
+
+  # Label editor for designing/printing labels (Brother P-touch Editor is
+  # Windows-only, so gLabels is the Linux equivalent).
+  - id: install-glabels
+    title: "Install label editor (gLabels)"
+    description: >
+      Installs gLabels, a label designer for Linux, used to design and print
+      labels (for example to the Brother PT-P950NW). An administrator password
+      will be requested.
+    category: "Printers"
+    type: script
+    privilege: root
+    script: install-glabels.sh
