@@ -14,10 +14,11 @@ USER_HOME=$(getent passwd "$REAL_UID" | cut -d: -f6)
 DL="$USER_HOME/Downloads"
 
 # Brother's driver filenames look like:
-#   ptp950nwlpr-1.0.2-0.i386.deb
-#   ptp950nwcupswrapper-1.0.2-0.i386.deb
-LPR=$(ls "$DL"/ptp950nwlpr-*.deb 2>/dev/null | sort -V | tail -1)
-CUPS=$(ls "$DL"/ptp950nwcupswrapper-*.deb 2>/dev/null | sort -V | tail -1)
+#   ptp950lpr-1.0.0-0.i386.deb
+#   ptp950cupswrapper-1.0.0-0.i386.deb
+# (the glob also tolerates a 'ptp950nw...' spelling, just in case).
+LPR=$(ls "$DL"/ptp950*lpr-*.deb 2>/dev/null | sort -V | tail -1)
+CUPS=$(ls "$DL"/ptp950*cupswrapper-*.deb 2>/dev/null | sort -V | tail -1)
 
 if [ -z "$LPR" ] || [ -z "$CUPS" ]; then
     echo "Could not find both Brother PT-P950NW drivers in $DL"
