@@ -63,6 +63,18 @@ fixes:
     privilege: none
     script: onlyoffice-qdrev.sh
 
+  # Clear stalled P & Q network drives
+  - id: clear-network-drives
+    title: "Clear stalled network drives (P and Q)"
+    description: >
+      If your P and Q drives show a red X even after running the mount script,
+      this clears the stale connection so you can try again from a clean state.
+      An administrator password will be requested.
+    category: "Network drives"
+    type: script
+    privilege: root
+    script: clear-network-drives.sh
+
   # ===== OPTIONAL SOFTWARE =====
 
   # Cisco VPN - interactive installer, so manual steps
