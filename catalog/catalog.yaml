@@ -4,7 +4,7 @@ format_version: 1
 
 fixes:
 
-  # ===== YOUR 3 v0 PRIORITIES =====
+  # ===== 3 v0 PRIORITIES =====
 
   # 1. Quicker domain login (needs root -> pkexec password popup)
   - id: sssd-slow-login
@@ -51,6 +51,17 @@ fixes:
     script: uninstall-m365-webapps.sh
 
   # ===== OFFICE / NETWORK DRIVES =====
+  # Clear stalled P & Q network drives
+  - id: clear-network-drives
+    title: "Clear stalled network drives (P and Q)"
+    description: >
+      If your P and Q drives show a red X even after running the mount script,
+      this clears the stale connection so you can try again from a clean state.
+      An administrator password will be requested.
+    category: "Network drives"
+    type: script
+    privilege: root
+    script: clear-network-drives.sh
 
   # OnlyOffice access to network drives (user-level, NO password)
   - id: onlyoffice-netdrives
@@ -63,17 +74,6 @@ fixes:
     privilege: none
     script: onlyoffice-qdrev.sh
 
-  # Clear stalled P & Q network drives
-  - id: clear-network-drives
-    title: "Clear stalled network drives (P and Q)"
-    description: >
-      If your P and Q drives show a red X even after running the mount script,
-      this clears the stale connection so you can try again from a clean state.
-      An administrator password will be requested.
-    category: "Network drives"
-    type: script
-    privilege: root
-    script: clear-network-drives.sh
 
   # ===== OPTIONAL SOFTWARE =====
 
