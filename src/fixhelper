@@ -131,15 +131,11 @@ class ManualStepsWindow(Adw.Window):
             num.add_css_class("dim-label")
             num.set_valign(Gtk.Align.START)
             row.add_prefix(num)
-            # a real Gtk.Label with markup = reliable clickable links
-            lbl = Gtk.Label()
-            lbl.set_markup(linkify(filled))
-            lbl.set_use_markup(True)
-            lbl.set_wrap(True)
-            lbl.set_xalign(0)
-            lbl.set_selectable(True)
-            lbl.set_hexpand(True)
-            row.set_title_widget(lbl)     # put the label where the title goes
+            
+            row.set_title(linkify(filled))
+            row.set_use_markup(True)
+            row.set_title_lines(0)
+
             # copy button
             copy_btn = Gtk.Button(icon_name="edit-copy-symbolic",
                                   valign=Gtk.Align.CENTER,
@@ -257,7 +253,11 @@ class FixHelperWindow(Adw.ApplicationWindow):
             for fix in fixes:
                 grp.add(self._row(fix))
             page.add(grp)
-        self.toast.set_child(page)
+        sw = Gtk.ScrolledWindow()
+        sw.set_child(page)
+        sw.set_vexpand(True)
+        sw.set_overlay_scrolling(False)   # always-visible scrollbar on the right
+        self.toast.set_child(sw)
         tb.set_content(self.toast)
         self.set_content(tb)
 
@@ -286,7 +286,10 @@ class FixHelperWindow(Adw.ApplicationWindow):
 
     def _steps(self, _b, fix):
         log_feedback(fix["id"], "steps_opened")
-        ManualStepsWindow(self, fix).present()
+        try:
+            ManualStepsWindow(self, fix).present()
+        except Exception as e:
+            self.toast.add_toast(Adw.Toast(title=f"Could not open steps: {e}"))
 
     def _run(self, button, fix):
         script = os.path.join(catalog_dir(), "fixes", fix["script"])
