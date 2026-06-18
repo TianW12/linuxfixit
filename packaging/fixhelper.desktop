@@ -1,8 +1,8 @@
 [Desktop Entry]
-Name=Fix Helper
+Name=LinuxFixIt
 Comment=Self-service fixes for common problems
 Exec=fixhelper
-Icon=preferences-system
+Icon=system-software-install
 Terminal=false
 Type=Application
 Categories=System;Utility;

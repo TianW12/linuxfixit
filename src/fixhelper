@@ -260,14 +260,23 @@ class LiveOutputWindow(Adw.Window):
                           margin_start=12, margin_end=12)
         sw.set_child(tv)
 
-        # status label at the bottom
+        # status label at the bottom, click to close dialog
         self._status = Gtk.Label(label="Running…",
-                                 margin_top=6, margin_bottom=10)
+                                 margin_top=6, margin_bottom=6)
         self._status.add_css_class("dim-label")
+
+        self._close_btn = Gtk.Button(label="Close",
+                                     margin_bottom=10,
+                                     margin_start=80,
+                                     margin_end=80)
+        self._close_btn.add_css_class("suggested-action")
+        self._close_btn.connect("clicked", lambda _: self.close())
+        self._close_btn.set_visible(False)   # hidden while running
 
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         box.append(sw)
         box.append(self._status)
+        box.append(self._close_btn)
 
         tb.set_content(box)
         self.set_content(tb)
@@ -294,10 +303,11 @@ class LiveOutputWindow(Adw.Window):
             self._status.set_text("✗ Script finished with errors")
             self._status.remove_css_class("dim-label")
             self._status.add_css_class("error")
+        self._close_btn.set_visible(True)   # show Close button when done
 
 class FixHelperWindow(Adw.ApplicationWindow):
     def __init__(self, app, catalog):
-        super().__init__(application=app, title="Fix Helper",
+        super().__init__(application=app, title="LinuxFixIt",
                          default_width=680, default_height=640)
         tb = Adw.ToolbarView()
         tb.add_top_bar(Adw.HeaderBar())
