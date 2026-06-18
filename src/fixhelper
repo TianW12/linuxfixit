@@ -237,6 +237,64 @@ class ManualStepsWindow(Adw.Window):
         ScriptResultDialog(self, fix, rc, out).present()
         return False
 
+# 
+class LiveOutputWindow(Adw.Window):
+    def __init__(self, parent, fix_title):
+        super().__init__(transient_for=parent, modal=True,
+                         default_width=560, default_height=420,
+                         title=fix_title)
+        tb = Adw.ToolbarView()
+        tb.add_top_bar(Adw.HeaderBar())
+
+        # scrollable text area for live output
+        sw = Gtk.ScrolledWindow()
+        sw.set_vexpand(True)
+        sw.set_hexpand(True)
+
+        self._buf = Gtk.TextBuffer()
+        tv = Gtk.TextView(buffer=self._buf,
+                          editable=False,
+                          wrap_mode=Gtk.WrapMode.WORD_CHAR,
+                          monospace=True,
+                          margin_top=12, margin_bottom=12,
+                          margin_start=12, margin_end=12)
+        sw.set_child(tv)
+
+        # status label at the bottom
+        self._status = Gtk.Label(label="Running…",
+                                 margin_top=6, margin_bottom=10)
+        self._status.add_css_class("dim-label")
+
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        box.append(sw)
+        box.append(self._status)
+
+        tb.set_content(box)
+        self.set_content(tb)
+
+        # keep a reference to the end of the text buffer for auto-scroll
+        self._end_mark = self._buf.create_mark(
+            "end", self._buf.get_end_iter(), left_gravity=False)
+        self._tv = tv
+
+    def append_line(self, line):
+        """Called from GLib.idle_add — adds one line to the text box."""
+        it = self._buf.get_end_iter()
+        self._buf.insert(it, line)
+        # auto-scroll to the bottom
+        self._tv.scroll_to_mark(self._end_mark, 0, False, 0, 0)
+
+    def set_done(self, success):
+        """Called when the script finishes."""
+        if success:
+            self._status.set_text("✓ Done successfully")
+            self._status.remove_css_class("dim-label")
+            self._status.add_css_class("success")
+        else:
+            self._status.set_text("✗ Script finished with errors")
+            self._status.remove_css_class("dim-label")
+            self._status.add_css_class("error")
+
 class FixHelperWindow(Adw.ApplicationWindow):
     def __init__(self, app, catalog):
         super().__init__(application=app, title="Fix Helper",
@@ -291,6 +349,7 @@ class FixHelperWindow(Adw.ApplicationWindow):
         except Exception as e:
             self.toast.add_toast(Adw.Toast(title=f"Could not open steps: {e}"))
 
+    # for script fixes: run the script in a thread, show live output, then show final result dialog
     def _run(self, button, fix):
         script = os.path.join(catalog_dir(), "fixes", fix["script"])
         if not os.path.isfile(script):
@@ -298,32 +357,48 @@ class FixHelperWindow(Adw.ApplicationWindow):
             return
         cmd = (["pkexec", "/bin/bash", script]
                if fix.get("privilege") == "root" else ["/bin/bash", script])
+
+        # open the live output window immediately
+        win = LiveOutputWindow(self, fix["title"])
+        win.present()
+
         button.set_sensitive(False)
-        button.set_label("Running\u2026")
+        button.set_label("Running…")
         log_feedback(fix["id"], "script_started")
-        threading.Thread(target=self._thread, args=(cmd, fix, button),
-                         daemon=True).start()
+        threading.Thread(target=self._thread,
+                         args=(cmd, fix, button, win), daemon=True).start()
 
-    def _thread(self, cmd, fix, button):
+    # Run the script in a background thread, sending output lines to the live output window as they come in.
+    def _thread(self, cmd, fix, button, win):
         try:
-            p = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
-            rc, out = p.returncode, (p.stdout + p.stderr)
-        except subprocess.TimeoutExpired:
-            rc, out = 1, "Timed out after 10 minutes."
-        except FileNotFoundError as e:
-            rc, out = 1, f"Could not start: {e}"
-        GLib.idle_add(self._done, fix, button, rc, out)
+            proc = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,   # merge stderr into stdout
+                text=True,
+            )
+            # read one line at a time and send to the window
+            for line in proc.stdout:
+                GLib.idle_add(win.append_line, line)
+            proc.wait()
+            rc = proc.returncode
+        except Exception as e:
+            rc = 1
+            GLib.idle_add(win.append_line, f"\nError: {e}\n")
 
-    def _done(self, fix, button, rc, out):
+        GLib.idle_add(self._done, fix, button, win, rc)
+
+    # After the script finishes, update the live output window with the final status and re-enable the button.
+    def _done(self, fix, button, win, rc):
         button.set_sensitive(True)
         button.set_label("Fix it")
         if rc in (126, 127):
-            self.toast.add_toast(Adw.Toast(
-                title="Cancelled \u2014 administrator authentication is required."))
+            win.set_done(False)
+            win.append_line("\nCancelled — administrator authentication is required.\n")
             log_feedback(fix["id"], "auth_cancelled")
             return False
         log_feedback(fix["id"], "script_finished", f"rc={rc}")
-        ScriptResultDialog(self, fix, rc, out).present()
+        win.set_done(rc == 0)
         return False
 
 
