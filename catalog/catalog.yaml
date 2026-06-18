@@ -109,3 +109,24 @@ fixes:
       - "Open the Citrix Workspace download page: {citrix_url}"
       - "Under 'Workspace app for Linux', download the Debian package (.deb) for 64-bit into your Downloads folder."
       - "Come back here and click 'Fix it' below."
+
+
+  # ===== PRINTERS =====
+
+  # Brother PT-P950NW label printer - download Brother's Linux drivers, then
+  # click "Fix it" to finish (mirrors the Citrix download-then-finish flow).
+  - id: brother-p950nw-install
+    title: "Install Brother PT-P950NW label printer"
+    description: >
+      Download Brother's two Linux drivers (LPR + CUPS wrapper), then click
+      "Fix it" to install them. An administrator password will be requested.
+    category: "Printers"
+    type: manual
+    action_script: brother-p950nw-install.sh
+    action_label: "Finish installing the Brother driver"
+    action_privilege: root
+    steps:
+      - "Open the Brother PT-P950NW Linux download page: https://support.brother.com/g/b/downloadtop.aspx?c=us&lang=en&prod=p950nweus"
+      - "Choose your Linux version, then download BOTH the 'LPR driver' (.deb) and the 'CUPS wrapper driver' (.deb) into your Downloads folder."
+      - "Come back here and click 'Fix it' below."
+      - "After it finishes, add the printer in Settings -> Printers (or http://localhost:631) using socket://<printer-ip>:9100 and the 'Brother PT-P950NW' driver."
