@@ -25,6 +25,12 @@ echo "Using domain section: $DOMAIN_SECTION"
 # apply settings (idempotent-ish)
 sed -i "/$DOMAIN_SECTION/,/^\[/ {
     s/^ad_gpo_access_control.*/ad_gpo_access_control = disabled/;
+    
+    # only disables the group → members direction:
+    # getent group sysadmins will no longer list the members of that group.
+    # BUT id username, groups username, and initgroups (what runs at login) still resolve correctly, 
+    # because those do a user-centric lookup — they read the user's own memberOf attribute, not the group's member list.
+    
     s/^ignore_group_members.*/ignore_group_members = true/;
     s/^ldap_referrals.*/ldap_referrals = false/;
     s/^enumerate.*/enumerate = false/;

@@ -19,10 +19,11 @@ fixes:
 
   # 2a. Install all M365 web app icons (global, needs root)
   - id: m365-webapps-install
-    title: "Install Microsoft 365 app icons (Outlook, Word, Excel, PowerPoint, Teams)"
+    title: "Add web shortcuts for Microsoft 365 (Outlook, Word, Excel, PowerPoint, Teams)"
     description: >
-      Creates app icons for everyone on this machine. An administrator
-      password will be requested.
+      Adds desktop shortcuts that open the online (browser) versions of these
+      Microsoft 365 apps in their own window. Installs Chromium if it's missing.
+      Available to everyone on this machine; an administrator password is requested.
     category: "Office applications"
     type: script
     privilege: root
@@ -30,10 +31,11 @@ fixes:
 
   # 2b. Install Outlook icon only (global, needs root)
   - id: outlook-webapp-install
-    title: "Install Outlook icon only"
+    title: "Add a web shortcut for Outlook"
     description: >
-      Creates just the Outlook app icon for everyone on this machine.
-      An administrator password will be requested.
+      Adds one desktop shortcut that opens Outlook on the web (Outlook Online)
+      in its own window. Available to everyone on this machine; an
+      administrator password is requested.
     category: "Office applications"
     type: script
     privilege: root
@@ -41,10 +43,10 @@ fixes:
 
   # 2c. Remove the M365 icons (global, needs root)
   - id: m365-webapps-uninstall
-    title: "Remove Microsoft 365 app icons"
+    title: "Remove the Microsoft 365 web shortcuts"
     description: >
-      Removes the M365 app icons from this machine. An administrator
-      password will be requested.
+      Removes the Microsoft 365 web shortcuts created above from this machine.
+      An administrator password is requested.
     category: "Office applications"
     type: script
     privilege: root
@@ -65,10 +67,9 @@ fixes:
 
   # OnlyOffice access to network drives (user-level, NO password)
   - id: onlyoffice-netdrives
-    title: "OnlyOffice cannot save files to network drives"
+    title: "OnlyOffice cannot access network drives"
     description: >
-      Grants OnlyOffice access to your network drives (Qdrev and
-      Personal). Runs as you, no admin password needed.
+      Grants OnlyOffice access to your network drives. Runs as you, no admin password needed.
     category: "Office applications"
     type: script
     privilege: none
@@ -85,10 +86,11 @@ fixes:
       so follow these steps in a terminal.
     category: "Optional software"
     type: manual
+    image_prefix: vpn  
     steps:
       - "Open your organization's VPN download page: {vpn_url} (download the Linux/64 package into Downloads)."
-      - "In Downloads, extract the downloaded archive (right click -> Extract Here)."
-      - "Open the extracted folders until you reach the folder named 'vpn' that contains vpn_install.sh."
+      - "In **Downloads**, extract the downloaded archive (right click -> Extract -> Extract archive here)."
+      - "Open the extracted folders until you reach the folder named 'vpn' that contains vpn_install.sh. (/home/your-username/Downloads/cisco-secure-client-linux64-5.1.3.62/nvm/)"
       - "Right click on blank space inside the 'vpn' folder and choose 'Open Terminal Here'."
       - "Run: sudo ./vpn_install.sh  (an administrator must type their password)."
       - "When asked to accept the licence terms, type y and press Enter."
@@ -115,31 +117,31 @@ fixes:
 
   # Brother PT-P950NW label printer - download Brother's Linux drivers, then
   # click "Fix it" to finish (mirrors the Citrix download-then-finish flow).
-  - id: brother-p950nw-install
-    title: "Install Brother PT-P950NW label printer"
-    description: >
-      Download Brother's two Linux drivers (LPR + CUPS wrapper), then click
-      "Fix it" to install them. An administrator password will be requested.
-    category: "Printers"
-    type: manual
-    action_script: brother-p950nw-install.sh
-    action_label: "Finish installing the Brother driver"
-    action_privilege: root
-    steps:
-      - "Open the Brother PT-P950NW Linux download page: https://support.brother.com/g/b/downloadtop.aspx?c=us&lang=en&prod=p950nweus"
-      - "Choose your Linux version, then download BOTH the 'LPR driver' (.deb) and the 'CUPS wrapper driver' (.deb) into your Downloads folder."
-      - "Come back here and click 'Fix it' below."
-      - "After it finishes, add the printer in Settings -> Printers (or http://localhost:631) using socket://<printer-ip>:9100 and the 'Brother PT-P950NW' driver."
+  # - id: brother-p950nw-install
+  #   title: "Install Brother PT-P950NW label printer"
+  #   description: >
+  #     Download Brother's two Linux drivers (LPR + CUPS wrapper), then click
+  #     "Fix it" to install them. An administrator password will be requested.
+  #   category: "Printers"
+  #   type: manual
+  #   action_script: brother-p950nw-install.sh
+  #   action_label: "Finish installing the Brother driver"
+  #   action_privilege: root
+  #   steps:
+  #     - "Open the Brother PT-P950NW Linux download page: https://support.brother.com/g/b/downloadtop.aspx?c=us&lang=en&prod=p950nweus"
+  #     - "Choose your Linux version, then download BOTH the 'LPR driver' (.deb) and the 'CUPS wrapper driver' (.deb) into your Downloads folder."
+  #     - "Come back here and click 'Fix it' below."
+  #     - "After it finishes, add the printer in Settings -> Printers (or http://localhost:631) using socket://<printer-ip>:9100 and the 'Brother PT-P950NW' driver."
 
-  # Label editor for designing/printing labels (Brother P-touch Editor is
-  # Windows-only, so gLabels is the Linux equivalent).
-  - id: install-glabels
-    title: "Install label editor (gLabels)"
-    description: >
-      Installs gLabels, a label designer for Linux, used to design and print
-      labels (for example to the Brother PT-P950NW). An administrator password
-      will be requested.
-    category: "Printers"
-    type: script
-    privilege: root
-    script: install-glabels.sh
+  # # Label editor for designing/printing labels (Brother P-touch Editor is
+  # # Windows-only, so gLabels is the Linux equivalent).
+  # - id: install-glabels
+  #   title: "Install label editor (gLabels)"
+  #   description: >
+  #     Installs gLabels, a label designer for Linux, used to design and print
+  #     labels (for example to the Brother PT-P950NW). An administrator password
+  #     will be requested.
+  #   category: "Printers"
+  #   type: script
+  #   privilege: root
+  #   script: install-glabels.sh

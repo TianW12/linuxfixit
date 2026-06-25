@@ -58,7 +58,12 @@ def fill_placeholders(text, config):
     return re.sub(r"\{(\w+)\}", repl, text)
 
 def linkify(text):
-    """Make URLs in text clickable; escape the rest for Pango markup."""
+    """Make URLs in text clickable; escape the rest for Pango markup,
+    and turn **double-asterisks** into bold."""
+    def fmt(segment):
+        escaped = html.escape(segment)                       # safe escaping first
+        return re.sub(r'\*\*(.+?)\*\*', r'<b>\1</b>', escaped)  # then **x** -> <b>x</b>
+    
     url_pattern = re.compile(r'(https?://[^\s<>"\)]+)')
     parts = []
     last = 0
@@ -112,40 +117,73 @@ class ScriptResultDialog(Adw.MessageDialog):
 class ManualStepsWindow(Adw.Window):
     def __init__(self, parent, fix):
         super().__init__(transient_for=parent, modal=True,
-                         default_width=580, default_height=560, title=fix["title"])
+                         default_width=720, default_height=680, title=fix["title"])
         self.fix = fix
         self.parent_win = parent
         tb = Adw.ToolbarView()
         tb.add_top_bar(Adw.HeaderBar())
-        page = Adw.PreferencesPage()
+
+        # A plain Box (instead of Adw.PreferencesPage) so the content is NOT
+        # clamped to a narrow centered column — it now fills the window width.
+        content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=18,
+                          margin_top=18, margin_bottom=18,
+                          margin_start=18, margin_end=18)
         cfg = load_etc_config()
 
         # --- the steps ---
         grp = Adw.PreferencesGroup(title=fix["title"],
                                    description=fix.get("description", ""))
+
+        prefix = fix.get("image_prefix")   # e.g. "vpn"  (None if the fix has no screenshots)
+
         for i, step in enumerate(fix.get("steps", []), start=1):
             filled = fill_placeholders(step, cfg)
-            row = Adw.ActionRow()
-            # number badge
+
             num = Gtk.Label(label=str(i))
             num.add_css_class("dim-label")
             num.set_valign(Gtk.Align.START)
-            row.add_prefix(num)
-            
-            row.set_title(linkify(filled))
-            row.set_use_markup(True)
-            row.set_title_lines(0)
 
-            # copy button
+            lbl = Gtk.Label(
+                label=linkify(filled),
+                use_markup=True,
+                selectable=True,
+                wrap=True,
+                xalign=0,
+                valign=Gtk.Align.START,
+                hexpand=True,
+            )
+
+            middle = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+            middle.append(lbl)
+            middle.set_hexpand(True)
+
+            # --- per-step screenshot: catalog/images/<prefix>-<i>.png ---
+            if prefix:
+                img_path = os.path.join(catalog_dir(), "images", f"{prefix}-{i}.png")
+                if os.path.isfile(img_path):
+                    pic = Gtk.Picture.new_for_filename(img_path)
+                    pic.set_can_shrink(True)
+                    pic.set_content_fit(Gtk.ContentFit.CONTAIN)
+                    pic.set_hexpand(True)            # WIDTH knob: fill the width
+                    pic.set_size_request(-1, 680)    # HEIGHT knob: bigger = taller
+                    middle.append(pic)
+
             copy_btn = Gtk.Button(icon_name="edit-copy-symbolic",
                                   valign=Gtk.Align.CENTER,
                                   tooltip_text="Copy this step")
             copy_btn.add_css_class("flat")
             copy_btn.connect("clicked", self._copy, filled)
-            row.add_suffix(copy_btn)
-            grp.add(row)
 
-        page.add(grp)
+            hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12,
+                           margin_top=10, margin_bottom=10,
+                           margin_start=12, margin_end=12)
+            hbox.append(num)
+            hbox.append(middle)
+            hbox.append(copy_btn)
+
+            grp.add(hbox)
+
+        content.append(grp)
 
         # --- optional action button (for hybrid fixes like Citrix) ---
         action = fix.get("action_script")
@@ -163,7 +201,7 @@ class ManualStepsWindow(Adw.Window):
             self.action_btn.connect("clicked", self._run_action, fix)
             action_row.add_suffix(self.action_btn)
             action_grp.add(action_row)
-            page.add(action_grp)
+            content.append(action_grp)
 
         # --- ONE subtle report link at the very bottom ---
         report_grp = Adw.PreferencesGroup()
@@ -175,11 +213,15 @@ class ManualStepsWindow(Adw.Window):
         report_btn.add_css_class("flat")
         report_btn.connect("clicked", self._report)
         report_row.add_suffix(report_btn)
-        report_grp.add(report_row)
-        page.add(report_grp)
+        content.append(report_grp)
+
+        # put everything in a scroller so long step lists can scroll
+        scroller = Gtk.ScrolledWindow()
+        scroller.set_child(content)
+        scroller.set_vexpand(True)
 
         self.toast = Adw.ToastOverlay()
-        self.toast.set_child(page)
+        self.toast.set_child(scroller)
         tb.set_content(self.toast)
         self.set_content(tb)
 
