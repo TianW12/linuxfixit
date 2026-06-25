@@ -52,6 +52,19 @@ fixes:
     privilege: root
     script: uninstall-m365-webapps.sh
 
+  # ===== Wifi  =====
+  - id: fix-dtusecure-wifi
+    title: "Auto-connect to DTUsecure (stop the KDE Wallet prompt)"
+    description: >
+      Stores your DTUsecure password system-wide so the laptop connects
+      automatically at startup, instead of falling back to DTUguest and
+      asking for the KDE Wallet password.
+    category: "Network"
+    type: script
+    privilege: none
+    script: fix-dtusecure-wifi.sh
+
+
   # ===== OFFICE / NETWORK DRIVES =====
   # Clear stalled P & Q network drives
   - id: clear-network-drives
