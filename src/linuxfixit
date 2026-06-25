@@ -16,13 +16,13 @@ gi.require_version("Adw", "1")
 from gi.repository import Adw, GLib, Gtk  # noqa: E402
 import yaml  # noqa: E402
 
-APP_ID = "com.yourcompany.FixHelper"
-SYSTEM_CATALOG_DIR = "/usr/share/fixhelper/catalog"
+APP_ID = "com.yourcompany.LinuxFixIt"
+SYSTEM_CATALOG_DIR = "/usr/share/linuxfixit/catalog"
 DEV_CATALOG_DIR = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), "..", "catalog"
 )
-ETC_CONFIG = "/etc/fixhelper/config.yaml"
-FEEDBACK_DIR = os.path.expanduser("~/.local/share/fixhelper")
+ETC_CONFIG = "/etc/linuxfixit/config.yaml"
+FEEDBACK_DIR = os.path.expanduser("~/.local/share/linuxfixit")
 FEEDBACK_FILE = os.path.join(FEEDBACK_DIR, "feedback.csv")
 
 
@@ -42,7 +42,7 @@ def load_catalog():
 
 
 def load_etc_config():
-    """Load /etc/fixhelper/config.yaml; return {} if missing or broken."""
+    """Load /etc/linuxfixit/config.yaml; return {} if missing or broken."""
     try:
         with open(ETC_CONFIG, "r", encoding="utf-8") as f:
             return yaml.safe_load(f) or {}

@@ -1,7 +1,7 @@
 [Desktop Entry]
 Name=LinuxFixIt
 Comment=Self-service fixes for common problems
-Exec=fixhelper
+Exec=linuxfixit
 Icon=system-software-install
 Terminal=false
 Type=Application

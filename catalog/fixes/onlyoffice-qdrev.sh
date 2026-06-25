@@ -3,7 +3,7 @@
 set -u
 
 # reads direct from config.yaml when installing
-CONFIG="/etc/fixhelper/config.yaml"
+CONFIG="/etc/linuxfixit/config.yaml"
 
 if [ ! -f "$CONFIG" ]; then
     echo "ERROR: config not found at $CONFIG"

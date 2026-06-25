@@ -21,9 +21,9 @@ Description: Self-service fix tool for common problems
  and step-by-step cards for manual fixes.
 CTRL
 
-install -m 755 src/fixhelper "$PKG/usr/bin/fixhelper"
+install -m 755 src/linuxfixit "$PKG/usr/bin/linuxfixit"
 cp -r catalog "$PKG/usr/share/linuxfixit/catalog"
-install -m 644 packaging/fixhelper.desktop "$PKG/usr/share/applications/"
+install -m 644 packaging/linuxfixit.desktop "$PKG/usr/share/applications/"
 # ship ONLY the fake example to /etc/linuxfixit/  (never the real config.yaml)
 install -m 644 config.example.yaml "$PKG/etc/linuxfixit/config.example.yaml"
 chmod 755 "$PKG"/usr/share/linuxfixit/catalog/fixes/*.sh
