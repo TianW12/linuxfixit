@@ -400,7 +400,8 @@ class FixHelperWindow(Adw.ApplicationWindow):
                 badge.set_valign(Gtk.Align.CENTER)
                 row.add_suffix(badge)
             else:
-                btn = Gtk.Button(label="Fix it", valign=Gtk.Align.CENTER)
+                btn = Gtk.Button(label=fix.get("button_label", "Fix it"),
+                                 valign=Gtk.Align.CENTER)
                 btn.add_css_class("suggested-action")
                 if priv == "root":
                     btn.set_tooltip_text("An administrator password will be requested")

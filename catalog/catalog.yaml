@@ -64,6 +64,22 @@ fixes:
     privilege: none
     script: fix-dtusecure-wifi.sh
 
+  # ===== PRINTERS =====
+  # Print a label directly to the Brother PT-P950NW network label printer.
+  # No Brother driver/SDK/serial number needed -- only the printer IP and a
+  # network path to it (same subnet). The script runs a preflight check
+  # (ping + LPR port 515), then pops up a form for text/width/copies/bold.
+  - id: print-label
+    title: "Print a label (Brother PT-P950NW)"
+    description: >
+      Print a text label on the Brother PT-P950NW. The computer must be on the
+      same network (subnet) as the printer. A short check runs first; if it
+      passes, you can set the text, tape width, number of copies, and bold.
+    category: "Printers"
+    type: script
+    privilege: none
+    script: print-label.sh
+    button_label: "Print label"
 
   # ===== OFFICE / NETWORK DRIVES =====
   # Clear stalled P & Q network drives
