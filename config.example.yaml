@@ -14,3 +14,5 @@ vpn_url: "https://vpn.example.com/download/"
 
 citrix_url: "https://www.citrix.com/downloads/workspace-app/linux/"
 
+# Brother PT-P950NW label printer IP address (must be on the same subnet)
+printer_ip: "PRINTER_IP_HERE"
