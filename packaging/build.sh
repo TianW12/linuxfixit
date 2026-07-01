@@ -1,7 +1,29 @@
 #!/bin/bash
 set -euo pipefail
 cd "$(dirname "$0")/.."
-VERSION="${1:-0.1.0}"
+
+# Derive the version from git tags.
+# - Exact tag (e.g. v0.1.7)            -> 0.1.7
+# - Commits after a tag                -> 0.1.7+5.gabc1234   (debian-friendly)
+# - No tags / not a git checkout       -> 0.0.0~dev<date>
+# An explicit argument still overrides: ./packaging/build.sh 0.1.9
+if [ "${1:-}" != "" ]; then
+    VERSION="$1"
+elif git -C . describe --tags >/dev/null 2>&1; then
+    RAW="$(git describe --tags --long --dirty 2>/dev/null)"
+    # strip a leading "v": v0.1.7-5-gabc1234 -> 0.1.7-5-gabc1234
+    RAW="${RAW#v}"
+    if printf '%s' "$RAW" | grep -q -- '-0-g'; then
+        # exact tag, no extra commits -> clean version (drop -0-g<hash>[-dirty])
+        VERSION="${RAW%%-0-g*}"
+    else
+        # tag + commits: 0.1.7-5-gabc1234 -> 0.1.7+5.gabc1234 (valid deb version)
+        VERSION="$(printf '%s' "$RAW" | sed -E 's/-([0-9]+)-g/+\1.g/; s/-dirty$/.dirty/')"
+    fi
+else
+    VERSION="0.0.0~dev$(date +%Y%m%d)"
+fi
+echo "Building version: ${VERSION}"
 PKG="build/linuxfixit_${VERSION}_all"
 
 rm -rf build
