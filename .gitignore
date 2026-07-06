@@ -2,3 +2,4 @@ build/
 *.deb
 __pycache__/
 config.yaml
+public/
