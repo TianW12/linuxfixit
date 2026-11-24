@@ -13,7 +13,7 @@ Package: linuxfixit
 Version: ${VERSION}
 Architecture: all
 Maintainer: IT Support <it@example.com>
-Depends: python3, python3-gi, python3-yaml, gir1.2-gtk-4.0, gir1.2-adw-1, pkexec | policykit-1, python3-pil, zenity
+Depends: python3, python3-gi, python3-yaml, gir1.2-gtk-4.0, gir1.2-adw-1, pkexec | policykit-1, python3-pil, zenity, curl
 Section: utils
 Priority: optional
 Description: Self-service fix tool for common problems

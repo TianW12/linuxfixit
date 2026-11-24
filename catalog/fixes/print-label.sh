@@ -26,13 +26,19 @@ fail() {
     exit 1
 }
 
-# ---- Printer IP: read from /etc/linuxfixit/config.yaml (no hardcoded default) ----
-PRINTER_IP=""
+# ---- Settings: read from /etc/linuxfixit/config.yaml (no hardcoded defaults) ----
 CONFIG="/etc/linuxfixit/config.yaml"
-if [ -f "$CONFIG" ]; then
-    PRINTER_IP=$(grep -E '^\s*printer_ip\s*:' "$CONFIG" 2>/dev/null \
-        | head -1 | sed -E 's/.*:\s*//; s/["'"'"']//g; s/\s+$//')
-fi
+
+# cfg <key>  ->  prints the value of "key: value" from config.yaml (quotes removed)
+cfg() {
+    [ -f "$CONFIG" ] || return 0
+    grep -E "^\s*$1\s*:" "$CONFIG" 2>/dev/null \
+        | head -1 | sed -E 's/^[^:]*:\s*//; s/["'"'"']//g; s/\s+$//'
+}
+
+PRINTER_IP=$(cfg printer_ip)
+ESP32_IP=$(cfg esp32_ip)          # optional: ESP32 power-on helper. Empty = feature off.
+ESP32_TOKEN=$(cfg esp32_token)    # must be the same as TOKEN in b2_press_api.ino
 
 if [ -z "$PRINTER_IP" ]; then
     fail "No printer IP is configured.\n\nAdd a line like:\n  printer_ip: \"<printer-ip>\"\nto ${CONFIG}, then try again."
@@ -64,11 +70,25 @@ fi
 # ---- 2. Preflight: ping + LPR port 515 ----
 echo "Preflight: checking ${PRINTER_IP} ..."
 
-ping -c 1 -W 2 "$PRINTER_IP" >/dev/null 2>&1 \
-    || fail "Cannot reach the printer at ${PRINTER_IP} (ping failed).\n\nCheck that the printer is on and this PC is on the same subnet, then try again."
+port_515_open() { timeout "${1:-5}" bash -c "echo > /dev/tcp/${PRINTER_IP}/515" 2>/dev/null; }
 
-if ! timeout 5 bash -c "echo > /dev/tcp/${PRINTER_IP}/515" 2>/dev/null; then
-    fail "The printer at ${PRINTER_IP} answered ping, but the print port (515/LPR) is closed or blocked.\n\nThis is usually a firewall / VLAN rule. Contact network admin."
+# ---- 2b. NEW: printer off? Ask the ESP32 to press the power button, then wait ----
+if ! ping -c 1 -W 2 "$PRINTER_IP" >/dev/null 2>&1; then
+    [ -n "$ESP32_IP" ] \
+        || fail "Cannot reach the printer at ${PRINTER_IP} (ping failed).\n\nCheck that the printer is on and this PC is on the same subnet, then try again."
+
+    echo "Printer doesn't answer. Asking the ESP32 (${ESP32_IP}) to switch it on..."
+    curl -s -m 5 -X POST -H "Authorization: Bearer ${ESP32_TOKEN}" "http://${ESP32_IP}/press" \
+        || fail "Cannot reach the printer or the ESP32 (${ESP32_IP}).\n\nPlease go to the label printer and check it."
+    echo ""                                   # the line above prints the ESP32's answer
+
+    echo -n "Waiting for the printer to start (max 40 s)"
+    for _ in $(seq 1 20); do sleep 2; echo -n "."; port_515_open 2 && break; done
+    echo ""
+fi
+
+if ! port_515_open; then
+    fail "The printer at ${PRINTER_IP} is not ready to print (port 515 is closed).\n\nPlease go to the label printer and check it: is it on, showing an error, out of tape, or still starting up? Then try again."
 fi
 
 echo "Preflight OK: printer reachable and LPR port open."

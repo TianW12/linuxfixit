@@ -16,3 +16,9 @@ citrix_url: "https://www.citrix.com/downloads/workspace-app/linux/"
 
 # Brother PT-P950NW label printer IP address (must be on the same subnet)
 printer_ip: "PRINTER_IP_HERE"
+
+# ESP32 power-on helper (optional). If the printer doesn't answer, linuxfixit
+# asks this ESP32 to press the printer's power button once.
+# Leave both empty to turn the feature off.
+esp32_ip: ""          # e.g. "10.61.0.60" (use a DHCP reservation)
+esp32_token: ""       # same text as TOKEN in b2_press_api.ino. Never commit the real one.
