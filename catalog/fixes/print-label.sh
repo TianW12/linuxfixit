@@ -103,7 +103,7 @@ FORM=$(zenity --forms --width=420 --title="Print a label" \
     --add-entry="Copies" \
     --add-combo="Bold" --combo-values="No|Yes" \
     --add-combo="Half-cut" --combo-values="Yes|No" \
-    --add-combo="Chain" --combo-values="No|Yes") \
+    --add-combo="Chain" --combo-values="Yes|No") \
     || { echo "Cancelled by user at form."; exit 0; }
 
 TEXT=$(echo "$FORM"     | cut -d'^' -f1)
@@ -129,12 +129,12 @@ BOLD_FLAG=""
 HALFCUT_FLAG=""
 [ "$HALFCUT" = "No" ] && HALFCUT_FLAG="--no-half-cut"
 
-# Chain defaults OFF; only turn ON if user explicitly chose Yes.
+# Chain defaults ON (one job = one blank leader); only OFF if user chose No.
 CHAIN_FLAG=""
-[ "$CHAIN" = "Yes" ] && CHAIN_FLAG="--chain"
+[ "$CHAIN" = "No" ] && CHAIN_FLAG="--no-chain"
 
 # ---- 5. Print ----
-echo "Printing: '$TEXT'  tape=${TAPE}mm  copies=${COPIES}  bold=${BOLD:-No}  half-cut=${HALFCUT:-Yes}  chain=${CHAIN:-No}"
+echo "Printing: '$TEXT'  tape=${TAPE}mm  copies=${COPIES}  bold=${BOLD:-No}  half-cut=${HALFCUT:-Yes}  chain=${CHAIN:-Yes}"
 echo ""
 
 python3 "$ENGINE" \
