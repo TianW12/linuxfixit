@@ -99,11 +99,11 @@ FORM=$(zenity --forms --width=420 --title="Print a label" \
     --text="Printer: ${PRINTER_IP}   (LPR / binary_p1)" \
     --separator="^" \
     --add-entry="Text to print" \
-    --add-combo="Tape width (mm)" --combo-values="3.5|6|9|12|18|24|36" \
+    --add-combo="Tape width (mm)" --combo-values="12|3.5|6|9|18|24|36" \
     --add-entry="Copies" \
     --add-combo="Bold" --combo-values="No|Yes" \
-    --add-combo="Halvvejs (half-cut)" --combo-values="Yes|No" \
-    --add-combo="Kaedeprint (chain)" --combo-values="No|Yes") \
+    --add-combo="Half-cut" --combo-values="Yes|No" \
+    --add-combo="Chain print" --combo-values="No|Yes") \
     || { echo "Cancelled by user at form."; exit 0; }
 
 TEXT=$(echo "$FORM"     | cut -d'^' -f1)
@@ -115,7 +115,7 @@ CHAIN=$(echo "$FORM"    | cut -d'^' -f6)
 
 # ---- 4. Validate ----
 [ -n "$TEXT" ] || fail "No text was entered. Please run again and type the label text."
-[ -n "$TAPE" ] || TAPE="12"
+[ -n "$TAPE" ] || TAPE="12"          # empty choice -> 12 mm (also the first item in the list)
 case "$COPIES" in
     ''|*[!0-9]*) COPIES=1 ;;
 esac
@@ -124,11 +124,11 @@ esac
 BOLD_FLAG=""
 [ "$BOLD" = "Yes" ] && BOLD_FLAG="--bold"
 
-# Halvvejs (half-cut) defaults ON; only turn OFF if user explicitly chose No.
+# Half-cut defaults ON; only turn OFF if user explicitly chose No.
 HALFCUT_FLAG=""
 [ "$HALFCUT" = "No" ] && HALFCUT_FLAG="--no-half-cut"
 
-# Kaedeprint (chain) defaults OFF; only turn ON if user explicitly chose Yes.
+# Chain print defaults OFF; only turn ON if user explicitly chose Yes.
 CHAIN_FLAG=""
 [ "$CHAIN" = "Yes" ] && CHAIN_FLAG="--chain"
 
