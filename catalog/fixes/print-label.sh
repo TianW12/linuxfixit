@@ -73,12 +73,12 @@ echo "Preflight: checking ${PRINTER_IP} ..."
 port_515_open() { timeout "${1:-5}" bash -c "echo > /dev/tcp/${PRINTER_IP}/515" 2>/dev/null; }
 
 # ---- 2b. NEW: printer off? Ask the ESP32 to press the power button, then wait ----
-if ! ping -c 1 -W 2 "$PRINTER_IP" >/dev/null 2>&1; then
+if ! port_515_open 3; then
     [ -n "$ESP32_IP" ] \
-        || fail "Cannot reach the printer at ${PRINTER_IP} (ping failed).\n\nCheck that the printer is on and this PC is on the same subnet, then try again."
+        || fail "Cannot reach the printer at ${PRINTER_IP} (print port 515 is closed).\n\nCheck that the printer is on and this PC is on the same subnet, then try again."
 
     echo "Printer doesn't answer. Asking the ESP32 (${ESP32_IP}) to switch it on..."
-    curl -s -m 5 -X POST -H "Authorization: Bearer ${ESP32_TOKEN}" "http://${ESP32_IP}/press" \
+    curl -sf -m 5 -X POST -H "Authorization: Bearer ${ESP32_TOKEN}" "http://${ESP32_IP}/press" \
         || fail "Cannot reach the printer or the ESP32 (${ESP32_IP}).\n\nPlease go to the label printer and check it."
     echo ""                                   # the line above prints the ESP32's answer
 
@@ -115,7 +115,7 @@ CHAIN=$(echo "$FORM"    | cut -d'^' -f6)
 
 # ---- 4. Validate ----
 [ -n "$TEXT" ] || fail "No text was entered. Please run again and type the label text."
- # empty choice -> 12 mm (also the first item in the list)
+# empty choice -> 12 mm (also the first item in the list)
 [ -n "$TAPE" ] || TAPE="12"
 case "$COPIES" in
     ''|*[!0-9]*) COPIES=1 ;;
