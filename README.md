@@ -78,6 +78,7 @@ The fixes currently shipped in `catalog/catalog.yaml`:
 | Network | Auto-connect to DTUsecure (stop wallet prompt) | script | no | `fix-dtusecure-wifi.sh` |
 | Network drives | Clear stalled network drives (P and Q) | script | yes | `clear-network-drives.sh` |
 | Printers | Print a label (Brother PT-P950NW) | script | no | `print-label.sh` |
+| Printers | Set up the FollowMe printer (new print server or queue) | script | yes (asks itself) | `setup-followme-printer.sh` + `setup-followme-printer-root.sh` |
 | Optional software | Install Cisco VPN (DTU) | manual | — | (steps only) |
 | Optional software | Install Citrix Workspace | manual + action | yes | `citrix-install.sh` |
 
@@ -181,6 +182,9 @@ The app reads site-specific values from `/etc/linuxfixit/config.yaml`. Keys:
 | `vpn_url` | Cisco VPN manual card (`{vpn_url}` placeholder) | download page URL |
 | `citrix_url` | Citrix manual card (`{citrix_url}` placeholder) | download page URL |
 | `printer_ip` | `print-label.sh` (label printing) | `192.0.2.50` |
+| `followme_server`, `followme_queue` | FollowMe card (pre-fills the questions) | `print.example.com`, `FollowMe-Queue-Name` |
+| `followme_local_name`, `followme_domain` | FollowMe card | `FollowMe-MFP-PCL`, `WIN` |
+| `followme_ppd` | FollowMe card, only if no Konica PPD is on the PC | `/path/to/KOC751iUX.ppd` |
 
 Notes:
 
@@ -289,6 +293,8 @@ flowchart TD
 | A root fix does nothing | Admin password prompt was cancelled (exit code 126/127). |
 | Label won't print, "cannot reach printer" | PC not on the printer's subnet, or `printer_ip` wrong in config. |
 | Label reaches printer but "LPR port closed" | Firewall/VLAN blocks TCP 515; contact the network admin. |
+| FollowMe: a login box pops up on every print | The queue is marked as needing a login. Run the FollowMe card, or `sudo lpadmin -p FollowMe-MFP-PCL -o auth-info-required=none`. |
+| FollowMe: jobs vanish, log says `NT_STATUS_LOGON_FAILURE` | Saved password is old. Run the FollowMe card again after a DTU password change. |
 | `apt-get install linuxfixit` not found | Run `setup-repo.sh` first (Method A) and `sudo apt-get update`. |
 
 ## Documentation

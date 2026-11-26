@@ -16,3 +16,10 @@ citrix_url: "https://www.citrix.com/downloads/workspace-app/linux/"
 
 # Brother PT-P950NW label printer IP address (must be on the same subnet)
 printer_ip: "PRINTER_IP_HERE"
+# FollowMe printing (card: "Set up the FollowMe printer"). All optional:
+# they only pre-fill the questions. Real host names go in the real config.yaml.
+followme_server: "print.example.com"
+followme_queue: "FollowMe-Queue-Name"        # queue name ON the print server
+followme_local_name: "FollowMe-MFP-PCL"      # queue name on this PC
+followme_domain: "WIN"                       # Windows domain added before the username
+# followme_ppd: "/path/to/KOC751iUX.ppd"     # only if no Konica PPD is on the PC yet
