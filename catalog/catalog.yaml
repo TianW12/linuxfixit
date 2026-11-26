@@ -81,6 +81,27 @@ fixes:
     script: print-label.sh
     button_label: "Print label"
 
+  # Set up (or move) the FollowMe copier queue. Two halves:
+  #   setup-followme-printer.sh       runs as the user: asks destination, which old
+  #                                   queues to remove, and the DTU login (zenity)
+  #   setup-followme-printer-root.sh  started by the first via pkexec: tests the login,
+  #                                   writes print-sustain.creds, installs the
+  #                                   smbspool-auth courier, creates the queue.
+  # privilege is "none" on purpose: pop-ups cannot open from a pkexec (root) script,
+  # so the user half asks the questions and calls pkexec itself.
+  - id: followme-printer-setup
+    title: "Set up the FollowMe printer (new print server or queue)"
+    description: >
+      Connects this PC to a FollowMe print server: asks for the server and queue
+      name, removes old FollowMe queues you tick (plotters are never touched),
+      and saves your DTU login so you are not asked for it on every print.
+      An administrator password will be requested.
+    category: "Printers"
+    type: script
+    privilege: none
+    script: setup-followme-printer.sh
+    button_label: "Set up printer"
+
   # ===== OFFICE / NETWORK DRIVES =====
   # Clear stalled P & Q network drives
   - id: clear-network-drives

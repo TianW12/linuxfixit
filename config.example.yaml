@@ -22,3 +22,11 @@ printer_ip: "PRINTER_IP_HERE"
 # Leave both empty to turn the feature off.
 esp32_ip: ""          # e.g. "10.61.0.60" (use a DHCP reservation)
 esp32_token: ""       # same text as TOKEN in b2_press_api.ino. Never commit the real one.
+
+# FollowMe printing (card: "Set up the FollowMe printer"). All optional:
+# they only pre-fill the questions. Real host names go in the real config.yaml.
+followme_server: "print.example.com"
+followme_queue: "FollowMe-Queue-Name"        # queue name ON the print server
+followme_local_name: "FollowMe-MFP-PCL"      # queue name on this PC
+followme_domain: "WIN"                       # Windows domain added before the username
+# followme_ppd: "/path/to/KOC751iUX.ppd"     # only if no Konica PPD is on the PC yet
